@@ -1,5 +1,6 @@
 #include "stackrisk/card.hpp"
 #include "stackrisk/evaluator.hpp"
+#include "stackrisk/simulation.hpp"
 
 #include <array>
 #include <cstdlib>
@@ -128,6 +129,71 @@ void rejects_invalid_hands() {
     CHECK(size_rejected);
 }
 
+void seeded_simulation_and_board_split() {
+    stackrisk::SimulationRequest request{
+        .hero = {card("As"), card("Kd")},
+        .opponents = 2,
+        .trials = 500,
+        .seed = 2026};
+    const auto first = stackrisk::simulate_equity(request);
+    const auto second = stackrisk::simulate_equity(request);
+    CHECK(first.trials == 500);
+    CHECK(first.wins + first.ties + first.losses == 500);
+    CHECK(first.wins == second.wins);
+    CHECK(first.ties == second.ties);
+    CHECK(first.losses == second.losses);
+    CHECK(first.equity == second.equity);
+    CHECK(first.confidence_low <= first.equity);
+    CHECK(first.equity <= first.confidence_high);
+
+    request.hero = {card("2c"), card("3c")};
+    request.board = {card("As"), card("Ks"), card("Qs"), card("Js"),
+                     card("Ts")};
+    request.opponents = 1;
+    request.trials = 25;
+    const auto board_split = stackrisk::simulate_equity(request);
+    CHECK(board_split.wins == 0);
+    CHECK(board_split.ties == 25);
+    CHECK(board_split.losses == 0);
+    CHECK(board_split.equity == 0.5);
+}
+
+void rejects_invalid_simulation_requests() {
+    stackrisk::SimulationRequest request{
+        .hero = {card("As"), card("Kd")},
+        .opponents = 1,
+        .trials = 10,
+        .seed = 1};
+    request.board = {card("As")};
+    bool duplicate_rejected = false;
+    try {
+        static_cast<void>(stackrisk::simulate_equity(request));
+    } catch (const std::invalid_argument&) {
+        duplicate_rejected = true;
+    }
+    CHECK(duplicate_rejected);
+
+    request.board.clear();
+    request.trials = 0;
+    bool zero_trials_rejected = false;
+    try {
+        static_cast<void>(stackrisk::simulate_equity(request));
+    } catch (const std::invalid_argument&) {
+        zero_trials_rejected = true;
+    }
+    CHECK(zero_trials_rejected);
+
+    request.trials = 1;
+    request.opponents = 9;
+    bool too_many_opponents_rejected = false;
+    try {
+        static_cast<void>(stackrisk::simulate_equity(request));
+    } catch (const std::invalid_argument&) {
+        too_many_opponents_rejected = true;
+    }
+    CHECK(too_many_opponents_rejected);
+}
+
 }  // namespace
 
 int main() {
@@ -135,6 +201,8 @@ int main() {
     recognizes_all_categories();
     handles_wheel_and_tie_breakers();
     rejects_invalid_hands();
+    seeded_simulation_and_board_split();
+    rejects_invalid_simulation_requests();
     if (failures != 0) return EXIT_FAILURE;
     std::cout << "StackRisk evaluator tests passed\n";
     return EXIT_SUCCESS;

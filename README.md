@@ -8,10 +8,13 @@ poker or bankroll-analysis product.
 
 **Implemented:** card parsing and deck generation; five- and seven-card hand
 evaluation for all standard poker categories, including ace-low straights;
-deterministic unit tests for categories, tie-breakers, and invalid hands.
+seeded Monte Carlo deal simulation; pot-share equity and a 95% normal-
+approximation confidence interval; a command-line interface; deterministic
+unit tests for categories, tie-breakers, split pots, and invalid input.
 
-**Not implemented yet:** Monte Carlo deal generation, equity estimates,
-confidence intervals, bankroll-risk analysis, and parallel simulation.
+**Not implemented yet:** bankroll-risk analysis, parallel simulation, and a
+measured benchmark report. The confidence interval is a sampling estimate,
+not a guarantee about real-world outcomes.
 
 ## Build and test
 
@@ -34,3 +37,19 @@ clang++ -std=c++20 -Wall -Wextra -Wpedantic -Werror -I include \
 
 Cards use two-character notation: ranks `2`-`9`, `T`, `J`, `Q`, `K`, `A` and
 suits `c`, `d`, `h`, `s` (for example, `As` is the ace of spades).
+
+## CLI example
+
+```sh
+./build/stackrisk-cli \
+  --hero As Kd \
+  --board 2c,3s,4h \
+  --opponents 2 \
+  --trials 100000 \
+  --seed 42
+```
+
+With the same inputs and seed, the simulation is repeatable. Equity counts a
+win as 1, a loss as 0, and a tied pot as an equal share. The reported win/tie/
+loss counts categorize outcomes; the equity calculation uses each outcome's
+share of the pot.

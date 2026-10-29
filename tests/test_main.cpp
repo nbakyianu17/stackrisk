@@ -137,6 +137,8 @@ void seeded_simulation_and_board_split() {
         .seed = 2026};
     const auto first = stackrisk::simulate_equity(request);
     const auto second = stackrisk::simulate_equity(request);
+    request.workers = 4;
+    const auto parallel = stackrisk::simulate_equity(request);
     CHECK(first.trials == 500);
     CHECK(first.wins + first.ties + first.losses == 500);
     CHECK(first.wins == second.wins);
@@ -145,6 +147,12 @@ void seeded_simulation_and_board_split() {
     CHECK(first.equity == second.equity);
     CHECK(first.confidence_low <= first.equity);
     CHECK(first.equity <= first.confidence_high);
+    CHECK(first.wins == parallel.wins);
+    CHECK(first.ties == parallel.ties);
+    CHECK(first.losses == parallel.losses);
+    CHECK(first.equity == parallel.equity);
+    CHECK(first.confidence_low == parallel.confidence_low);
+    CHECK(first.confidence_high == parallel.confidence_high);
 
     request.hero = {card("2c"), card("3c")};
     request.board = {card("As"), card("Ks"), card("Qs"), card("Js"),
@@ -192,6 +200,16 @@ void rejects_invalid_simulation_requests() {
         too_many_opponents_rejected = true;
     }
     CHECK(too_many_opponents_rejected);
+
+    request.opponents = 1;
+    request.workers = 0;
+    bool invalid_workers_rejected = false;
+    try {
+        static_cast<void>(stackrisk::simulate_equity(request));
+    } catch (const std::invalid_argument&) {
+        invalid_workers_rejected = true;
+    }
+    CHECK(invalid_workers_rejected);
 }
 
 }  // namespace
@@ -204,6 +222,6 @@ int main() {
     seeded_simulation_and_board_split();
     rejects_invalid_simulation_requests();
     if (failures != 0) return EXIT_FAILURE;
-    std::cout << "StackRisk evaluator tests passed\n";
+    std::cout << "StackRisk tests passed\n";
     return EXIT_SUCCESS;
 }

@@ -21,6 +21,7 @@ void print_help() {
         << "  --opponents N          Number of opponents, 1-8 (default: 1)\n"
         << "  --trials N             Monte Carlo deals (default: 100000)\n"
         << "  --seed N               Random seed (default: 42)\n"
+        << "  --workers N            Parallel workers, 1-64 (default: 1)\n"
         << "  --help                 Show this help\n";
 }
 
@@ -102,6 +103,12 @@ int main(int argc, char** argv) {
                     throw std::invalid_argument("--seed requires a number");
                 }
                 request.seed = parse_integer(argv[index], "seed");
+            } else if (option == "--workers") {
+                if (++index >= argc) {
+                    throw std::invalid_argument("--workers requires a number");
+                }
+                request.workers =
+                    static_cast<std::size_t>(parse_integer(argv[index], "workers"));
             } else {
                 throw std::invalid_argument("unknown option: " +
                                             std::string(option));

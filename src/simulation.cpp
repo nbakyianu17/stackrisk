@@ -4,49 +4,37 @@
 
 #include <algorithm>
 #include <cmath>
+#include <future>
 #include <random>
 #include <stdexcept>
 #include <vector>
 
 namespace stackrisk {
+namespace {
 
-EquityResult simulate_equity(const SimulationRequest& request) {
-    if (request.trials == 0) {
-        throw std::invalid_argument("trials must be greater than zero");
-    }
-    if (request.opponents == 0 || request.opponents > 8) {
-        throw std::invalid_argument("opponents must be between 1 and 8");
-    }
-    if (request.board.size() > 5) {
-        throw std::invalid_argument("the board cannot contain more than five cards");
-    }
-
-    std::vector<Card> known_cards{request.hero[0], request.hero[1]};
-    known_cards.insert(known_cards.end(), request.board.begin(),
-                       request.board.end());
-    for (std::size_t left = 0; left < known_cards.size(); ++left) {
-        for (std::size_t right = left + 1; right < known_cards.size(); ++right) {
-            if (known_cards[left] == known_cards[right]) {
-                throw std::invalid_argument("known cards must be unique");
-            }
-        }
-    }
-
-    std::vector<Card> deck;
-    deck.reserve(52 - known_cards.size());
-    for (const Card card : make_deck()) {
-        if (std::ranges::find(known_cards, card) == known_cards.end()) {
-            deck.push_back(card);
-        }
-    }
-
-    std::mt19937_64 random(request.seed);
+struct PartialResult {
     EquityResult result;
-    result.trials = request.trials;
     double equity_sum = 0.0;
     double squared_equity_sum = 0.0;
+};
 
-    for (std::uint64_t trial = 0; trial < request.trials; ++trial) {
+std::uint64_t trial_seed(std::uint64_t seed, std::uint64_t trial) {
+    std::uint64_t value = seed + trial + 0x9E3779B97F4A7C15ULL;
+    value = (value ^ (value >> 30)) * 0xBF58476D1CE4E5B9ULL;
+    value = (value ^ (value >> 27)) * 0x94D049BB133111EBULL;
+    return value ^ (value >> 31);
+}
+
+PartialResult simulate_range(const SimulationRequest& request,
+                             const std::vector<Card>& available_deck,
+                             std::uint64_t first_trial,
+                             std::uint64_t trial_count) {
+    PartialResult partial;
+    partial.result.trials = trial_count;
+
+    for (std::uint64_t offset = 0; offset < trial_count; ++offset) {
+        std::mt19937_64 random(trial_seed(request.seed, first_trial + offset));
+        auto deck = available_deck;
         std::shuffle(deck.begin(), deck.end(), random);
         std::size_t next = 0;
 
@@ -87,32 +75,103 @@ EquityResult simulate_equity(const SimulationRequest& request) {
         double share = 0.0;
         if (hero_rank == best_rank) {
             if (winners == 1) {
-                ++result.wins;
+                ++partial.result.wins;
             } else {
-                ++result.ties;
+                ++partial.result.ties;
             }
             share = 1.0 / static_cast<double>(winners);
         } else {
-            ++result.losses;
+            ++partial.result.losses;
         }
-        equity_sum += share;
-        squared_equity_sum += share * share;
+        partial.equity_sum += share;
+        partial.squared_equity_sum += share * share;
     }
 
-    result.equity = equity_sum / static_cast<double>(request.trials);
+    return partial;
+}
+
+}  // namespace
+
+EquityResult simulate_equity(const SimulationRequest& request) {
+    if (request.trials == 0) {
+        throw std::invalid_argument("trials must be greater than zero");
+    }
+    if (request.opponents == 0 || request.opponents > 8) {
+        throw std::invalid_argument("opponents must be between 1 and 8");
+    }
+    if (request.board.size() > 5) {
+        throw std::invalid_argument("the board cannot contain more than five cards");
+    }
+    if (request.workers == 0 || request.workers > 64) {
+        throw std::invalid_argument("workers must be between 1 and 64");
+    }
+
+    std::vector<Card> known_cards{request.hero[0], request.hero[1]};
+    known_cards.insert(known_cards.end(), request.board.begin(),
+                       request.board.end());
+    for (std::size_t left = 0; left < known_cards.size(); ++left) {
+        for (std::size_t right = left + 1; right < known_cards.size(); ++right) {
+            if (known_cards[left] == known_cards[right]) {
+                throw std::invalid_argument("known cards must be unique");
+            }
+        }
+    }
+
+    std::vector<Card> available_deck;
+    available_deck.reserve(52 - known_cards.size());
+    for (const Card card : make_deck()) {
+        if (std::ranges::find(known_cards, card) == known_cards.end()) {
+            available_deck.push_back(card);
+        }
+    }
+
+    const std::size_t workers = static_cast<std::size_t>(
+        std::min<std::uint64_t>(request.workers, request.trials));
+    const std::uint64_t base_trials = request.trials / workers;
+    const std::uint64_t extra_trials = request.trials % workers;
+    std::vector<std::future<PartialResult>> jobs;
+    jobs.reserve(workers);
+
+    std::uint64_t first_trial = 0;
+    for (std::size_t worker = 0; worker < workers; ++worker) {
+        const std::uint64_t worker_trials =
+            base_trials + (worker < extra_trials ? 1 : 0);
+        const auto start = first_trial;
+        first_trial += worker_trials;
+        jobs.push_back(std::async(
+            std::launch::async, simulate_range, std::cref(request),
+            std::cref(available_deck), start, worker_trials));
+    }
+
+    PartialResult total;
+    total.result.trials = request.trials;
+    for (auto& job : jobs) {
+        const auto partial = job.get();
+        total.result.wins += partial.result.wins;
+        total.result.ties += partial.result.ties;
+        total.result.losses += partial.result.losses;
+        total.equity_sum += partial.equity_sum;
+        total.squared_equity_sum += partial.squared_equity_sum;
+    }
+
+    total.result.equity =
+        total.equity_sum / static_cast<double>(request.trials);
     if (request.trials > 1) {
         const double count = static_cast<double>(request.trials);
         const double variance = std::max(
-            0.0, (squared_equity_sum - equity_sum * equity_sum / count) /
+            0.0, (total.squared_equity_sum -
+                  total.equity_sum * total.equity_sum / count) /
                      (count - 1.0));
         const double margin = 1.96 * std::sqrt(variance / count);
-        result.confidence_low = std::max(0.0, result.equity - margin);
-        result.confidence_high = std::min(1.0, result.equity + margin);
+        total.result.confidence_low =
+            std::max(0.0, total.result.equity - margin);
+        total.result.confidence_high =
+            std::min(1.0, total.result.equity + margin);
     } else {
-        result.confidence_low = result.equity;
-        result.confidence_high = result.equity;
+        total.result.confidence_low = total.result.equity;
+        total.result.confidence_high = total.result.equity;
     }
-    return result;
+    return total.result;
 }
 
 }  // namespace stackrisk

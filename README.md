@@ -10,11 +10,14 @@ poker or bankroll-analysis product.
 evaluation for all standard poker categories, including ace-low straights;
 seeded Monte Carlo deal simulation; pot-share equity and a 95% normal-
 approximation confidence interval; a command-line interface; deterministic
-unit tests for categories, tie-breakers, split pots, and invalid input.
+unit tests for categories, tie-breakers, split pots, and invalid input; and
+parallel execution that produces the same results as a single worker for a
+given seed.
 
-**Not implemented yet:** bankroll-risk analysis, parallel simulation, and a
-measured benchmark report. The confidence interval is a sampling estimate,
-not a guarantee about real-world outcomes.
+**Not implemented yet:** bankroll-risk analysis. The current runtime
+measurement is specific to the machine and scenario recorded below. The
+confidence interval is a sampling estimate, not a guarantee about real-world
+outcomes.
 
 ## Build and test
 
@@ -46,10 +49,16 @@ suits `c`, `d`, `h`, `s` (for example, `As` is the ace of spades).
   --board 2c,3s,4h \
   --opponents 2 \
   --trials 100000 \
-  --seed 42
+  --seed 42 \
+  --workers 4
 ```
 
 With the same inputs and seed, the simulation is repeatable. Equity counts a
 win as 1, a loss as 0, and a tied pot as an equal share. The reported win/tie/
 loss counts categorize outcomes; the equity calculation uses each outcome's
 share of the pot.
+
+Across three local runs, 100,000 trials with two opponents and a three-card
+board took about 0.36 seconds with one worker and 0.10-0.14 seconds with four
+workers. This is a local smoke benchmark, not a controlled performance claim;
+results vary by machine, compiler, and hand configuration.

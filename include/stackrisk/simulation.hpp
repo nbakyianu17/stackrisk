@@ -15,6 +15,7 @@ struct SimulationRequest {
     std::size_t opponents = 1;
     std::uint64_t trials = 100'000;
     std::uint64_t seed = 42;
+    std::size_t workers = 1;
 };
 
 struct EquityResult {

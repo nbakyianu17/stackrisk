@@ -29,11 +29,11 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-The evaluator tests can also be compiled directly with Clang:
+The tests can also be compiled directly with Clang:
 
 ```sh
-clang++ -std=c++20 -Wall -Wextra -Wpedantic -Werror -I include \
-  src/card.cpp src/evaluator.cpp tests/test_main.cpp \
+clang++ -std=c++20 -Wall -Wextra -Wpedantic -Werror -pthread -I include \
+  src/card.cpp src/evaluator.cpp src/simulation.cpp tests/test_main.cpp \
   -o /tmp/stackrisk-tests
 /tmp/stackrisk-tests
 ```

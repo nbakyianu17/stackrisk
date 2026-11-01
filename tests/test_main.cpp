@@ -106,6 +106,21 @@ void handles_wheel_and_tie_breakers() {
         best(std::array{card("As"), card("Kd"), card("Qh"), card("Jc"),
                         card("Ts"), card("2d"), card("3c")});
     CHECK(ace_high_straight.kickers[0] == 14);
+
+    const auto straight_needs_cards_after_the_first_five =
+        best(std::array{card("8c"), card("Qd"), card("Jc"), card("2h"),
+                        card("4s"), card("9s"), card("Th")});
+    CHECK(straight_needs_cards_after_the_first_five.category ==
+          Category::straight);
+    CHECK(straight_needs_cards_after_the_first_five.kickers[0] == 12);
+
+    const auto pair_with_king_kicker =
+        stackrisk::evaluate_five(std::array{card("As"), card("Ad"), card("Kc"),
+                                            card("9h"), card("4s")});
+    const auto pair_with_queen_kicker =
+        stackrisk::evaluate_five(std::array{card("Ah"), card("Ac"), card("Qc"),
+                                            card("Js"), card("8h")});
+    CHECK(pair_with_king_kicker > pair_with_queen_kicker);
 }
 
 void rejects_invalid_hands() {

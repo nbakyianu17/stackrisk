@@ -116,6 +116,22 @@ int main(int argc, char** argv) {
         }
         if (!has_hero) throw std::invalid_argument("--hero is required");
 
+        std::cout << "Hero: " << request.hero[0].to_string() << ' '
+                  << request.hero[1].to_string() << "\nBoard: ";
+        if (request.board.empty()) {
+            std::cout << "(none; all five cards are simulated)";
+        } else {
+            for (std::size_t index = 0; index < request.board.size(); ++index) {
+                if (index > 0) std::cout << ", ";
+                std::cout << request.board[index].to_string();
+            }
+            std::cout << " (" << request.board.size() << " known, "
+                      << 5 - request.board.size() << " simulated)";
+        }
+        std::cout << "\nOpponents: " << request.opponents
+                  << "\nSeed: " << request.seed
+                  << "\nWorkers: " << request.workers << '\n';
+
         const auto result = stackrisk::simulate_equity(request);
         const auto percent = [](double value) { return value * 100.0; };
         std::cout << std::fixed << std::setprecision(2)

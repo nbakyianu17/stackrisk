@@ -61,6 +61,9 @@ std::vector<stackrisk::Card> parse_board(std::string_view text) {
         cards.push_back(parse_card(token));
         if (end == std::string_view::npos) break;
         start = end + 1;
+        if (start == text.size()) {
+            throw std::invalid_argument("board contains an empty card");
+        }
     }
     return cards;
 }

@@ -40,6 +40,7 @@ clang++ -std=c++20 -Wall -Wextra -Wpedantic -Werror -pthread -I include \
 
 Cards use two-character notation: ranks `2`-`9`, `T`, `J`, `Q`, `K`, `A` and
 suits `c`, `d`, `h`, `s` (for example, `As` is the ace of spades).
+Run `./build/stackrisk-cli --help` for a compact example and option overview.
 
 ## CLI example
 

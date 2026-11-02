@@ -22,7 +22,11 @@ void print_help() {
         << "  --trials N             Monte Carlo deals (default: 100000)\n"
         << "  --seed N               Random seed (default: 42)\n"
         << "  --workers N            Parallel workers, 1-64 (default: 1)\n"
-        << "  --help                 Show this help\n";
+        << "  --help                 Show this help\n\n"
+        << "Example:\n"
+        << "  stackrisk-cli --hero As Kd --board 2c,3s,4h "
+           "--opponents 2 --seed 42\n"
+        << "Use the same inputs and seed to repeat a simulation.\n";
 }
 
 std::uint64_t parse_integer(std::string_view text, std::string_view name) {

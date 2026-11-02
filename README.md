@@ -57,8 +57,9 @@ Run `./build/stackrisk-cli --help` for a compact example and option overview.
 With the same inputs and seed, the simulation is repeatable. Equity counts a
 win as 1, a loss as 0, and a tied pot as an equal share. The reported win/tie/
 loss counts categorize outcomes; the equity calculation uses each outcome's
-share of the pot. The CLI echoes the hole cards, known board, opponent count,
-seed, and worker count so each result is tied to the setup that produced it.
+share of the pot. The CLI reports win/tie/loss counts and their percentages,
+and echoes the hole cards, known board, opponent count, seed, and worker count
+so each result is tied to the setup that produced it.
 
 Across three local runs, 100,000 trials with two opponents and a three-card
 board took about 0.36 seconds with one worker and 0.10-0.14 seconds with four

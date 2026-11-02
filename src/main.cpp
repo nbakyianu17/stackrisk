@@ -141,14 +141,21 @@ int main(int argc, char** argv) {
 
         const auto result = stackrisk::simulate_equity(request);
         const auto percent = [](double value) { return value * 100.0; };
+        const auto outcome_percent = [&result](std::uint64_t count) {
+            return 100.0 * static_cast<double>(count) /
+                   static_cast<double>(result.trials);
+        };
         std::cout << std::fixed << std::setprecision(2)
                   << "Trials: " << result.trials << '\n'
                   << "Equity: " << percent(result.equity) << "%\n"
                   << "95% CI: [" << percent(result.confidence_low) << "%, "
                   << percent(result.confidence_high) << "%]\n"
-                  << "Wins: " << result.wins << '\n'
-                  << "Ties: " << result.ties << '\n'
-                  << "Losses: " << result.losses << '\n';
+                  << "Wins: " << result.wins << " ("
+                  << outcome_percent(result.wins) << "%)\n"
+                  << "Ties: " << result.ties << " ("
+                  << outcome_percent(result.ties) << "%)\n"
+                  << "Losses: " << result.losses << " ("
+                  << outcome_percent(result.losses) << "%)\n";
         return 0;
     } catch (const std::exception& error) {
         std::cerr << "error: " << error.what() << '\n';

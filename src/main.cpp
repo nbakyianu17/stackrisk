@@ -149,7 +149,9 @@ int main(int argc, char** argv) {
                   << "Trials: " << result.trials << '\n'
                   << "Equity: " << percent(result.equity) << "%\n"
                   << "95% CI: [" << percent(result.confidence_low) << "%, "
-                  << percent(result.confidence_high) << "%]\n"
+                  << percent(result.confidence_high) << "%] (width: "
+                  << percent(result.confidence_high - result.confidence_low)
+                  << " percentage points)\n"
                   << "Wins: " << result.wins << " ("
                   << outcome_percent(result.wins) << "%)\n"
                   << "Ties: " << result.ties << " ("

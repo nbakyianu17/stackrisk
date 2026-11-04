@@ -99,8 +99,10 @@ EquityResult simulate_equity(const SimulationRequest& request) {
     if (request.opponents == 0 || request.opponents > 8) {
         throw std::invalid_argument("opponents must be between 1 and 8");
     }
-    if (request.board.size() > 5) {
-        throw std::invalid_argument("the board cannot contain more than five cards");
+    if (request.board.size() != 0 && request.board.size() != 3 &&
+        request.board.size() != 4 && request.board.size() != 5) {
+        throw std::invalid_argument(
+            "the board must contain 0, 3, 4, or 5 known cards");
     }
     if (request.workers == 0 || request.workers > 64) {
         throw std::invalid_argument("workers must be between 1 and 64");

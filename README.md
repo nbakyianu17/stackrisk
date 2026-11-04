@@ -42,6 +42,8 @@ Cards use two-character notation: ranks `2`-`9`, `T`, `J`, `Q`, `K`, `A` and
 suits `c`, `d`, `h`, `s` (for example, `As` is the ace of spades).
 Run `./build/stackrisk-cli --help` for a compact example and option overview.
 Whitespace around comma-separated board cards is ignored.
+Known boards must have 0, 3, 4, or 5 cards, corresponding to pre-flop,
+flop, turn, or river.
 
 ## CLI example
 

@@ -187,7 +187,7 @@ void rejects_invalid_simulation_requests() {
         .opponents = 1,
         .trials = 10,
         .seed = 1};
-    request.board = {card("As")};
+    request.board = {card("As"), card("Ks"), card("Qs")};
     bool duplicate_rejected = false;
     try {
         static_cast<void>(stackrisk::simulate_equity(request));
@@ -195,6 +195,15 @@ void rejects_invalid_simulation_requests() {
         duplicate_rejected = true;
     }
     CHECK(duplicate_rejected);
+
+    request.board = {card("Qs")};
+    bool invalid_board_size_rejected = false;
+    try {
+        static_cast<void>(stackrisk::simulate_equity(request));
+    } catch (const std::invalid_argument&) {
+        invalid_board_size_rejected = true;
+    }
+    CHECK(invalid_board_size_rejected);
 
     request.board.clear();
     request.trials = 0;

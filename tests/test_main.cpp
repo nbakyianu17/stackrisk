@@ -181,6 +181,53 @@ void seeded_simulation_and_board_split() {
     CHECK(board_split.equity == 0.5);
 }
 
+void exact_river_enumeration() {
+    stackrisk::SimulationRequest request{
+        .hero = {card("2c"), card("3c")},
+        .board = {card("As"), card("Ks"), card("Qs"), card("Js"), card("Ts")},
+        .opponents = 1};
+    const auto result = stackrisk::exact_river_equity(request);
+    CHECK(result.trials == 990);
+    CHECK(result.wins == 0);
+    CHECK(result.ties == 990);
+    CHECK(result.losses == 0);
+    CHECK(result.equity == 0.5);
+    CHECK(result.confidence_low == result.equity);
+    CHECK(result.confidence_high == result.equity);
+
+    request.hero = {card("As"), card("Kd")};
+    request.board = {card("2c"), card("3s"), card("4h"), card("5d"),
+                     card("7c")};
+    const auto mixed_result = stackrisk::exact_river_equity(request);
+    CHECK(mixed_result.trials == 990);
+    CHECK(mixed_result.wins == 703);
+    CHECK(mixed_result.ties == 117);
+    CHECK(mixed_result.losses == 170);
+    CHECK(mixed_result.equity == (703.0 + 117.0 * 0.5) / 990.0);
+
+    request.hero = {card("2c"), card("3c")};
+    request.board = {card("As"), card("Ks"), card("Qs"), card("Js"),
+                     card("Ts")};
+    request.board.pop_back();
+    bool incomplete_board_rejected = false;
+    try {
+        static_cast<void>(stackrisk::exact_river_equity(request));
+    } catch (const std::invalid_argument&) {
+        incomplete_board_rejected = true;
+    }
+    CHECK(incomplete_board_rejected);
+
+    request.board.push_back(card("Ts"));
+    request.opponents = 2;
+    bool multiple_opponents_rejected = false;
+    try {
+        static_cast<void>(stackrisk::exact_river_equity(request));
+    } catch (const std::invalid_argument&) {
+        multiple_opponents_rejected = true;
+    }
+    CHECK(multiple_opponents_rejected);
+}
+
 void rejects_invalid_simulation_requests() {
     stackrisk::SimulationRequest request{
         .hero = {card("As"), card("Kd")},
@@ -244,6 +291,7 @@ int main() {
     handles_wheel_and_tie_breakers();
     rejects_invalid_hands();
     seeded_simulation_and_board_split();
+    exact_river_enumeration();
     rejects_invalid_simulation_requests();
     if (failures != 0) return EXIT_FAILURE;
     std::cout << "StackRisk tests passed\n";

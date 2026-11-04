@@ -22,6 +22,7 @@ void print_help() {
         << "  --trials N             Monte Carlo deals (default: 100000)\n"
         << "  --seed N               Random seed (default: 42)\n"
         << "  --workers N            Parallel workers, 1-64 (default: 1)\n"
+        << "  --exact                Enumerate all opponent hands on the river\n"
         << "  --help                 Show this help\n\n"
         << "Example:\n"
         << "  stackrisk-cli --hero As Kd --board 2c,3s,4h "
@@ -84,6 +85,7 @@ int main(int argc, char** argv) {
             .hero = {stackrisk::Card{stackrisk::Rank::two, stackrisk::Suit::clubs},
                      stackrisk::Card{stackrisk::Rank::two, stackrisk::Suit::clubs}}};
         bool has_hero = false;
+        bool exact = false;
 
         for (int index = 1; index < argc; ++index) {
             const std::string_view option(argv[index]);
@@ -91,7 +93,9 @@ int main(int argc, char** argv) {
                 print_help();
                 return 0;
             }
-            if (option == "--hero") {
+            if (option == "--exact") {
+                exact = true;
+            } else if (option == "--hero") {
                 if (index + 2 >= argc) {
                     throw std::invalid_argument("--hero requires two cards");
                 }
@@ -143,24 +147,36 @@ int main(int argc, char** argv) {
             std::cout << " (" << request.board.size() << " known, "
                       << 5 - request.board.size() << " simulated)";
         }
-        std::cout << "\nOpponents: " << request.opponents
-                  << "\nSeed: " << request.seed
-                  << "\nWorkers: " << request.workers << '\n';
+        std::cout << "\nOpponents: " << request.opponents << '\n';
+        if (exact) {
+            std::cout << "Method: exact river enumeration\n"
+                      << "Opponent model: uniform over legal hands\n";
+        } else {
+            std::cout << "Method: Monte Carlo\nSeed: " << request.seed
+                      << "\nWorkers: " << request.workers << '\n';
+        }
 
-        const auto result = stackrisk::simulate_equity(request);
+        const auto result = exact ? stackrisk::exact_river_equity(request)
+                                  : stackrisk::simulate_equity(request);
         const auto percent = [](double value) { return value * 100.0; };
         const auto outcome_percent = [&result](std::uint64_t count) {
             return 100.0 * static_cast<double>(count) /
                    static_cast<double>(result.trials);
         };
-        std::cout << std::fixed << std::setprecision(2)
-                  << "Trials: " << result.trials << '\n'
-                  << "Equity: " << percent(result.equity) << "%\n"
-                  << "95% CI: [" << percent(result.confidence_low) << "%, "
-                  << percent(result.confidence_high) << "%] (width: "
-                  << percent(result.confidence_high - result.confidence_low)
-                  << " percentage points)\n"
-                  << "Wins: " << result.wins << " ("
+        std::cout << std::fixed << std::setprecision(2);
+        if (exact) {
+            std::cout << "Opponent hands evaluated: " << result.trials << '\n'
+                      << "Equity: " << percent(result.equity) << "%\n";
+            std::cout << "Sampling uncertainty: none (all opponent hands enumerated)\n";
+        } else {
+            std::cout << "Trials: " << result.trials << '\n'
+                      << "Equity: " << percent(result.equity) << "%\n"
+                      << "95% CI: [" << percent(result.confidence_low) << "%, "
+                      << percent(result.confidence_high) << "%] (width: "
+                      << percent(result.confidence_high - result.confidence_low)
+                      << " percentage points)\n";
+        }
+        std::cout << "Wins: " << result.wins << " ("
                   << outcome_percent(result.wins) << "%)\n"
                   << "Ties: " << result.ties << " ("
                   << outcome_percent(result.ties) << "%)\n"

@@ -90,12 +90,7 @@ PartialResult simulate_range(const SimulationRequest& request,
     return partial;
 }
 
-}  // namespace
-
-EquityResult simulate_equity(const SimulationRequest& request) {
-    if (request.trials == 0) {
-        throw std::invalid_argument("trials must be greater than zero");
-    }
+std::vector<Card> available_cards(const SimulationRequest& request) {
     if (request.opponents == 0 || request.opponents > 8) {
         throw std::invalid_argument("opponents must be between 1 and 8");
     }
@@ -103,9 +98,6 @@ EquityResult simulate_equity(const SimulationRequest& request) {
         request.board.size() != 4 && request.board.size() != 5) {
         throw std::invalid_argument(
             "the board must contain 0, 3, 4, or 5 known cards");
-    }
-    if (request.workers == 0 || request.workers > 64) {
-        throw std::invalid_argument("workers must be between 1 and 64");
     }
 
     std::vector<Card> known_cards{request.hero[0], request.hero[1]};
@@ -119,13 +111,27 @@ EquityResult simulate_equity(const SimulationRequest& request) {
         }
     }
 
-    std::vector<Card> available_deck;
-    available_deck.reserve(52 - known_cards.size());
+    std::vector<Card> deck;
+    deck.reserve(52 - known_cards.size());
     for (const Card card : make_deck()) {
         if (std::ranges::find(known_cards, card) == known_cards.end()) {
-            available_deck.push_back(card);
+            deck.push_back(card);
         }
     }
+    return deck;
+}
+
+}  // namespace
+
+EquityResult simulate_equity(const SimulationRequest& request) {
+    if (request.trials == 0) {
+        throw std::invalid_argument("trials must be greater than zero");
+    }
+    if (request.workers == 0 || request.workers > 64) {
+        throw std::invalid_argument("workers must be between 1 and 64");
+    }
+
+    const auto available_deck = available_cards(request);
 
     const std::size_t workers = static_cast<std::size_t>(
         std::min<std::uint64_t>(request.workers, request.trials));
@@ -174,6 +180,49 @@ EquityResult simulate_equity(const SimulationRequest& request) {
         total.result.confidence_high = total.result.equity;
     }
     return total.result;
+}
+
+EquityResult exact_river_equity(const SimulationRequest& request) {
+    if (request.board.size() != 5) {
+        throw std::invalid_argument(
+            "exact equity requires a complete five-card river board");
+    }
+    if (request.opponents != 1) {
+        throw std::invalid_argument(
+            "exact river equity currently supports exactly one opponent");
+    }
+    const auto deck = available_cards(request);
+    const auto rank_hand = [&request](const std::array<Card, 2>& hole) {
+        const std::array<Card, 7> cards{
+            hole[0], hole[1], request.board[0], request.board[1],
+            request.board[2], request.board[3], request.board[4]};
+        return evaluate_best(cards);
+    };
+
+    const auto hero_rank = rank_hand(request.hero);
+    EquityResult result;
+    double equity_sum = 0.0;
+    for (std::size_t first = 0; first < deck.size(); ++first) {
+        for (std::size_t second = first + 1; second < deck.size(); ++second) {
+            ++result.trials;
+            const auto opponent_rank =
+                rank_hand({deck[first], deck[second]});
+            if (hero_rank > opponent_rank) {
+                ++result.wins;
+                equity_sum += 1.0;
+            } else if (hero_rank == opponent_rank) {
+                ++result.ties;
+                equity_sum += 0.5;
+            } else {
+                ++result.losses;
+            }
+        }
+    }
+
+    result.equity = equity_sum / static_cast<double>(result.trials);
+    result.confidence_low = result.equity;
+    result.confidence_high = result.equity;
+    return result;
 }
 
 }  // namespace stackrisk

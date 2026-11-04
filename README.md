@@ -12,7 +12,8 @@ seeded Monte Carlo deal simulation; pot-share equity and a 95% normal-
 approximation confidence interval; a command-line interface; deterministic
 unit tests for categories, tie-breakers, split pots, and invalid input; and
 parallel execution that produces the same results as a single worker for a
-given seed.
+given seed. Exact one-opponent equity is also available for completed river
+boards under a uniform legal-hand assumption.
 
 **Not implemented yet:** bankroll-risk analysis. The current runtime
 measurement is specific to the machine and scenario recorded below. The
@@ -64,6 +65,19 @@ share of the pot. The CLI reports win/tie/loss counts and their percentages,
 and shows the 95% interval width in percentage points to make estimate
 uncertainty easier to compare. It also echoes the hole cards, known board,
 opponent count, seed, and worker count so each result is tied to its setup.
+
+On a complete river board against one opponent, `--exact` enumerates all 990
+legal opponent hands, treating each combination as equally likely. It reports
+exact equity without a sampling confidence interval; exact mode does not
+currently support custom opponent ranges, multiple opponents, or earlier
+streets.
+
+```sh
+./build/stackrisk-cli \
+  --hero As Kd \
+  --board 2c,3s,4h,5d,7c \
+  --exact
+```
 
 Across three local runs, 100,000 trials with two opponents and a three-card
 board took about 0.36 seconds with one worker and 0.10-0.14 seconds with four

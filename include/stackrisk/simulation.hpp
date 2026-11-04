@@ -29,5 +29,6 @@ struct EquityResult {
 };
 
 [[nodiscard]] EquityResult simulate_equity(const SimulationRequest& request);
+[[nodiscard]] EquityResult exact_river_equity(const SimulationRequest& request);
 
 }  // namespace stackrisk

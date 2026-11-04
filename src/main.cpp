@@ -52,9 +52,17 @@ std::vector<stackrisk::Card> parse_board(std::string_view text) {
     std::size_t start = 0;
     while (start < text.size()) {
         const auto end = text.find(',', start);
-        const auto token = text.substr(
+        auto token = text.substr(
             start, end == std::string_view::npos ? text.size() - start
                                                  : end - start);
+        const auto first = token.find_first_not_of(" \t\n\r\f\v");
+        if (first != std::string_view::npos) {
+            token.remove_prefix(first);
+            token = token.substr(
+                0, token.find_last_not_of(" \t\n\r\f\v") + 1);
+        } else {
+            token = {};
+        }
         if (token.empty()) {
             throw std::invalid_argument("board contains an empty card");
         }
